@@ -1,0 +1,273 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//==================== USER MANAGEMENT ====================
+
+model User {
+  id           String    @id @default(uuid())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String?
+  role         String    @default("user")
+  lastLogin    DateTime?
+  isActive     Boolean   @default(true)
+
+  // Relations
+  blogs    Blog[]
+  projects Project[]
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([role])
+}
+
+//==================== BLOG MANAGEMENT ====================
+
+model Blog {
+  id          String    @id @default(uuid())
+  title       String
+  slug        String    @unique
+  content     String    @db.Text // Use Text type for long content
+  summary     String?
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  viewCount   Int       @default(0)
+
+  // Relations
+  authorId String
+  author   User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  images   BlogImage[]
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([authorId])
+  @@index([published])
+  @@index([slug])
+}
+
+model BlogImage {
+  id        String  @id @default(uuid())
+  url       String
+  filename  String
+  alt       String?
+  caption   String?
+  sortOrder Int     @default(0)
+
+  // Relations
+  blogId String?
+  blog   Blog?   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([blogId])
+}
+
+//==================== GALLERY MANAGEMENT ====================
+
+model Gallery {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  slug        String  @unique
+  isActive    Boolean @default(true)
+
+  // Relations
+  images GalleryImage[]
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model GalleryImage {
+  id        String  @id @default(uuid())
+  url       String
+  filename  String
+  alt       String?
+  caption   String?
+  sortOrder Int     @default(0)
+
+  // Relations
+  galleryId String
+  gallery   Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([galleryId])
+}
+
+//==================== PRESS & COVERAGE MANAGEMENT ====================
+
+model Press {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  slug        String  @unique
+  isActive    Boolean @default(true)
+
+  // Relations
+  items PressItem[]
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model PressItem {
+  id              String    @id @default(uuid())
+  title           String
+  publicationName String?
+  publicationDate DateTime?
+  url             String?
+  imageUrl        String?
+  excerpt         String?
+  sortOrder       Int       @default(0)
+
+  // Relations
+  pressId String
+  press   Press  @relation(fields: [pressId], references: [id], onDelete: Cascade)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pressId])
+}
+
+//==================== PROJECT MANAGEMENT ====================
+
+model Project {
+  id             String    @id @default(uuid())
+  title          String
+  slug           String    @unique
+  description    String
+  content        String    @db.Text
+  logoUrl        String
+  completionDate DateTime?
+  featured       Boolean   @default(false)
+  published      Boolean   @default(false)
+  publishedAt    DateTime?
+  viewCount      Int       @default(0)
+
+  // Overview section
+  overviewHeadline    String?
+  overviewDescription String? @db.Text
+  location            String?
+
+  // Specifications & Features
+  specifications ProjectSpecification[]
+
+  // Amenities
+  amenities ProjectAmenity[]
+
+  // Plans
+  sitePlanHeadline    String?
+  sitePlanImage       String?
+  sitePlanBrochureUrl String?
+
+  currentPlanHeadline    String?
+  currentPlanImage       String?
+  currentPlanBrochureUrl String?
+
+  unitPlanHeadline    String?
+  unitPlanImage       String?
+  unitPlanBrochureUrl String?
+
+  // Location details
+  mapUrl            String?
+  nearbyAttractions String? @db.Text
+  locationDetails   String? @db.Text
+
+  // Relations
+  authorId String
+  author   User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  images   ProjectImage[]
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([authorId])
+  @@index([slug])
+  @@index([published])
+  @@index([featured])
+}
+
+model ProjectImage {
+  id           String  @id @default(uuid())
+  url          String
+  filename     String
+  alt          String?
+  caption      String?
+  isFeatured   Boolean @default(false)
+  displayOrder Int     @default(0)
+
+  // Relations
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([isFeatured])
+}
+
+// New model for Specifications & Features section
+model ProjectSpecification {
+  id           String @id @default(uuid())
+  title        String
+  description  String @db.Text
+  imageUrl     String
+  displayOrder Int    @default(0)
+
+  // Relations
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+// New model for Amenities section
+model ProjectAmenity {
+  id           String @id @default(uuid())
+  name         String
+  imageUrl     String
+  displayOrder Int    @default(0)
+
+  // Relations
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
