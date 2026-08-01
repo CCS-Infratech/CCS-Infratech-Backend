@@ -19,6 +19,7 @@ const createProjectHandler = async (req: Request, res: Response): Promise<void> 
     projectUrl,
     logoUrl,
     content,
+    status,
     completionDate,
     featured,
     published,
@@ -93,6 +94,7 @@ const createProjectHandler = async (req: Request, res: Response): Promise<void> 
     if (projectUrl) projectData.projectUrl = projectUrl;
     if (logoUrl) projectData.logoUrl = logoUrl;
     if (processedContent) projectData.content = processedContent;
+    if (status) projectData.status = status;
     if (completionDate) projectData.completionDate = new Date(completionDate);
     if (published) projectData.publishedAt = new Date();
     if (overviewHeadline) projectData.overviewHeadline = overviewHeadline;
@@ -353,6 +355,7 @@ const getProjectHandler = async (req: Request, res: Response): Promise<void> => 
         description: true,
         content: true,
         logoUrl: true,
+        status: true,
         completionDate: true,
         featured: true,
         publishedAt: true,
@@ -429,6 +432,7 @@ const getPublishedProjectHandler = async (req: Request, res: Response): Promise<
       description: true,
       content: true,
       logoUrl: true,
+      status: true,
       completionDate: true,
       featured: true,
       publishedAt: true,
@@ -500,6 +504,7 @@ const updateProjectHandler = async (req: Request, res: Response): Promise<void> 
     projectUrl,
     logoUrl,
     content,
+    status,
     completionDate,
     featured,
     published,
@@ -588,6 +593,7 @@ const updateProjectHandler = async (req: Request, res: Response): Promise<void> 
 
   // Add optional fields to update data
   if (description !== undefined) updateData.description = description;
+  if (status !== undefined) updateData.status = status;
   if (clientName !== undefined) updateData.clientName = clientName;
   if (projectUrl !== undefined) updateData.projectUrl = projectUrl;
   if (logoUrl !== undefined) updateData.logoUrl = logoUrl;
