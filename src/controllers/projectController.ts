@@ -6,7 +6,7 @@ import { BUCKET_NAME, s3Client } from '@/utils/s3-utils';
 import { controllerWrapper } from '@/utils/controllerWrapper';
 import slugify from 'slugify';
 import { validate as isUuid } from 'uuid';
-import { processContentImages } from '@/utils/helper';
+import { processContentImages, routeParam } from '@/utils/helper';
 
 /**
  * Create a new project
@@ -336,7 +336,7 @@ const getPublishedProjectsHandler = async (req: Request, res: Response): Promise
  * Get a single project by ID or slug
  */
 const getProjectHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
 
   try {
     const project = await prisma.project.update({
@@ -405,7 +405,7 @@ const getProjectHandler = async (req: Request, res: Response): Promise<void> => 
  * Get a single project by ID or slug
  */
 const getPublishedProjectHandler = async (req: Request, res: Response): Promise<void> => {
-  const { identifier } = req.params;
+  const identifier = routeParam(req.params.identifier);
 
   // Determine if the identifier is an ID (UUID) or slug
   const isId = isUuid(identifier);
@@ -496,7 +496,7 @@ const getPublishedProjectHandler = async (req: Request, res: Response): Promise<
  * Update a project
  */
 const updateProjectHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
   const {
     title,
     description,
@@ -766,7 +766,7 @@ const updateProjectHandler = async (req: Request, res: Response): Promise<void> 
  * Delete a project
  */
 const deleteProjectHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
   const userId = req.user?.id;
 
   if (!userId) {

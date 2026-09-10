@@ -11,6 +11,8 @@ coverage/
 #env files
 .env
 .env.local
+.env.production
+.env.development
 /src/generated/prisma
 # output from bundlers
 dist/

@@ -24,6 +24,7 @@ app.use(
       'http://localhost:3000',
       'http://127.0.0.1:3000',
       'http://localhost:3001',
+      'http://65.0.137.82',
       'https://admin.ccsinfratech.com',
       'https://ccsinfratech.com',
       'https://www.ccsinfratech.com',

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '@/configs/db';
 import { controllerWrapper } from '@/utils/controllerWrapper';
+import { routeParam } from '@/utils/helper';
 
 /**
  * Get all press categories
@@ -50,7 +51,7 @@ const getPublishedPressHandler = async (req: Request, res: Response): Promise<vo
  * Get a press category by ID
  */
 const getPressByIdHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
 
   const press = await prisma.press.findUnique({
     where: { id },
@@ -179,7 +180,7 @@ const createPressHandler = async (req: Request, res: Response): Promise<void> =>
  * Update a press category
  */
 const updatePressHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
   const { name, description, slug, isActive, items = [] } = req.body;
 
   // Check if press category exists
@@ -299,7 +300,7 @@ const updatePressHandler = async (req: Request, res: Response): Promise<void> =>
  * Delete a press category
  */
 const deletePressHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
 
   // Check if press category exists
   const press = await prisma.press.findUnique({
@@ -330,7 +331,7 @@ const deletePressHandler = async (req: Request, res: Response): Promise<void> =>
  * Delete a press item
  */
 const deletePressItemHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
 
   // Check if press item exists
   const item = await prisma.pressItem.findUnique({

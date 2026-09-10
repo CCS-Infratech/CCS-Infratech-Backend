@@ -5,6 +5,7 @@ import { prisma } from '@/configs/db';
 import multer from 'multer';
 import { BUCKET_NAME, s3Client } from '@/utils/s3-utils';
 import { controllerWrapper } from '@/utils/controllerWrapper';
+import { routeParam } from '@/utils/helper';
 
 /**
  * Get all galleries
@@ -58,7 +59,7 @@ const getPublishedGalleriesHandler = async (req: Request, res: Response): Promis
  * Get a gallery by slug
  */
 const getGalleryByIdHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
 
   const gallery = await prisma.gallery.findUnique({
     where: { id },
@@ -89,7 +90,7 @@ const getGalleryByIdHandler = async (req: Request, res: Response): Promise<void>
  * Get a published gallery by ID
  */
 const getPublishedGalleryByIdHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
 
   const gallery = await prisma.gallery.findFirst({
     where: {
@@ -180,7 +181,7 @@ const createGalleryHandler = async (req: Request, res: Response): Promise<void> 
  * Update a gallery
  */
 const updateGalleryHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
   const { name, description, slug, isActive, images = [] } = req.body;
 
   // Check if gallery exists
@@ -296,7 +297,7 @@ const updateGalleryHandler = async (req: Request, res: Response): Promise<void> 
  * Delete a gallery
  */
 const deleteGalleryHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
 
   // Check if gallery exists
   const gallery = await prisma.gallery.findUnique({
@@ -342,7 +343,7 @@ const deleteGalleryHandler = async (req: Request, res: Response): Promise<void> 
  * Delete an image from a gallery
  */
 const deleteGalleryImageHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
 
   // Check if image exists
   const image = await prisma.galleryImage.findUnique({
