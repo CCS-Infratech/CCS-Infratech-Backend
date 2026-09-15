@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import { prisma } from '@/configs/db';
 import { BUCKET_NAME, s3Client } from '@/utils/s3-utils';
 import multer from 'multer';
+import { routeParam } from '@/utils/helper';
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -181,7 +182,7 @@ export const getImages = async (req: Request, res: Response): Promise<void> => {
  */
 export const deleteImage = async (req: Request, res: Response): Promise<void> => {
   try {
-    const imageId = req.params.id;
+    const imageId = routeParam(req.params.id);
 
     await prisma.blogImage.delete({
       where: {

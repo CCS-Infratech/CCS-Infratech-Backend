@@ -14,3 +14,5 @@ coverage/
 /src/generated/prisma
 # output from bundlers
 dist/
+
+.env.production

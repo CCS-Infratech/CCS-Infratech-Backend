@@ -3,7 +3,7 @@ import { prisma } from '@/configs/db';
 import { controllerWrapper } from '@/utils/controllerWrapper';
 import slugify from 'slugify';
 import { validate as isUuid } from 'uuid';
-import { processContentImages } from '@/utils/helper';
+import { processContentImages, routeParam } from '@/utils/helper';
 
 declare global {
   namespace Express {
@@ -223,7 +223,7 @@ const getPublusedBlogsHandler = async (req: Request, res: Response): Promise<voi
  * Get a single blog post by ID or slug
  */
 const getBlogHandler = async (req: Request, res: Response): Promise<void> => {
-  const { identifier } = req.params;
+  const identifier = routeParam(req.params.identifier);
 
   // Determine if the identifier is an ID (UUID) or slug
   const isId = isUuid(identifier);
@@ -275,7 +275,7 @@ const getBlogHandler = async (req: Request, res: Response): Promise<void> => {
  * Update a blog post
  */
 const updateBlogHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
   const { title, content, summary, published } = req.body;
   const userId = req.user?.id;
 
@@ -439,7 +439,7 @@ const updateBlogHandler = async (req: Request, res: Response): Promise<void> => 
  * Delete a blog post
  */
 const deleteBlogHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
   const userId = req.user?.id;
 
   if (!userId) {
@@ -492,7 +492,7 @@ const deleteBlogHandler = async (req: Request, res: Response): Promise<void> => 
  * Upload blog images
  */
 const uploadBlogImagesHandler = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = routeParam(req.params.id);
   const userId = req.user?.id;
 
   if (!userId) {
