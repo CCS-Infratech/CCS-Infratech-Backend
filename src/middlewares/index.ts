@@ -1,20 +1,19 @@
 import compression from 'compression';
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
 import { type Express } from 'express';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import morgan from 'morgan';
 
-import { corsConfig } from '@/configs/cors';
 import { cspDirectives } from '@/configs/csp';
 
 import { rateLimiter } from './rateLimiter';
 
 export const applyMiddleware = (app: Express): void => {
-  app.use(cors(corsConfig));
-
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    })
+  );
 
   app.use(helmet.contentSecurityPolicy({ directives: cspDirectives }));
 

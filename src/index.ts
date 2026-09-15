@@ -2,6 +2,7 @@ import express, { type Express, type Request, type Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
+import { corsConfig } from '@/configs/cors';
 import { connectToDatabase } from '@/configs/db';
 import { envConfig } from '@/configs/env';
 import { errorHandler } from '@/middlewares/errorHandler';
@@ -18,22 +19,7 @@ const app: Express = express();
 
 // 1. Basic middleware FIRST
 app.use(cookieParser());
-app.use(
-  cors({
-    origin: [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'http://localhost:3001',
-      'https://admin.ccsinfratech.com',
-      'https://ccsinfratech.com',
-      'https://www.ccsinfratech.com',
-      'https://www.admin.ccsinfratech.com',
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+app.use(cors(corsConfig));
 app.use(express.json({ limit: '1mb' }));
 
 applyMiddleware(app);

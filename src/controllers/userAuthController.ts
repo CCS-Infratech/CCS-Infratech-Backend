@@ -7,6 +7,32 @@ import { controllerWrapper } from '@/utils/controllerWrapper';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = '12h';
 
+function isLocalOrigin(req: Request): boolean {
+  const origin = req.headers.origin || req.headers.host || '';
+  return origin.includes('localhost') || origin.includes('127.0.0.1');
+}
+
+function authCookieOptions(req: Request) {
+  if (isLocalOrigin(req)) {
+    return {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax' as const,
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
+  }
+
+  return {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none' as const,
+    domain: '.ccsinfratech.com',
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  };
+}
+
 /**
  * Register a new user
  */
@@ -116,13 +142,9 @@ const loginUserHandler = async (req: Request, res: Response): Promise<void> => {
 
   const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-  res.cookie('authToken', token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    domain: '.ccsinfratech.com',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  const cookieOptions = authCookieOptions(req);
+
+  res.cookie('authToken', token, cookieOptions);
 
   const userInfo = {
     id: user.id,
@@ -130,13 +152,7 @@ const loginUserHandler = async (req: Request, res: Response): Promise<void> => {
     role: user.role,
   };
 
-  res.cookie('userInfo', JSON.stringify(userInfo), {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    domain: '.ccsinfratech.com',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie('userInfo', JSON.stringify(userInfo), cookieOptions);
 
   res.status(200).json({
     success: true,
@@ -155,19 +171,10 @@ const loginUserHandler = async (req: Request, res: Response): Promise<void> => {
  * Logout user by invalidating their token
  */
 const logoutUserHandler = async (req: Request, res: Response): Promise<void> => {
-  res.clearCookie('authToken', {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    domain: '.ccsinfratech.com',
-  });
+  const cookieOptions = authCookieOptions(req);
 
-  res.clearCookie('userInfo', {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    domain: '.ccsinfratech.com',
-  });
+  res.clearCookie('authToken', cookieOptions);
+  res.clearCookie('userInfo', cookieOptions);
 
   res.status(200).json({
     success: true,
