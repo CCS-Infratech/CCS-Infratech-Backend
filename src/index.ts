@@ -12,6 +12,7 @@ import authRoutes from '@/routes/authRoute';
 import blogRoutes from '@/routes/blogRoute';
 import imageRoutes from '@/routes/imageRoute';
 import projectRoutes from '@/routes/projectRotues';
+import projectGroupRoutes from '@/routes/projectGroupRoutes';
 import gallaryRoutes from '@/routes/gallaryRoute';
 import pressRoutes from '@/routes/pressRoute';
 
@@ -40,6 +41,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/blog', blogRoutes);
 app.use('/api/v1/images', imageRoutes);
 app.use('/api/v1/projects', projectRoutes);
+app.use('/api/v1/project-groups', projectGroupRoutes);
 app.use('/api/v1/gallary', gallaryRoutes);
 app.use('/api/v1/press', pressRoutes);
 

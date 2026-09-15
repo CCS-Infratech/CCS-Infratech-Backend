@@ -162,19 +162,49 @@ enum ProjectStatus {
   COMPLETED
 }
 
+enum ProjectCategory {
+  RESIDENTIAL
+  COMMERCIAL
+  INDUSTRIAL
+  HEALTHCARE
+  RENOVATION
+  SPORTS
+}
+
+model ProjectGroup {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String? @db.Text
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  projects Project[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isActive])
+}
+
 model Project {
-  id             String        @id @default(uuid())
+  id             String          @id @default(uuid())
   title          String
-  slug           String        @unique
+  slug           String          @unique
   description    String
-  content        String        @db.Text
+  content        String          @db.Text
   logoUrl        String
-  status         ProjectStatus @default(UNDER_CONSTRUCTION)
+  status         ProjectStatus   @default(UNDER_CONSTRUCTION)
+  category       ProjectCategory @default(RESIDENTIAL)
   completionDate DateTime?
-  featured       Boolean       @default(false)
-  published      Boolean       @default(false)
+  featured       Boolean         @default(false)
+  published      Boolean         @default(false)
   publishedAt    DateTime?
-  viewCount      Int           @default(0)
+  viewCount      Int             @default(0)
+
+  groupId String?
+  group   ProjectGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   // Overview section
   overviewHeadline    String?
@@ -218,6 +248,8 @@ model Project {
   @@index([slug])
   @@index([published])
   @@index([featured])
+  @@index([groupId])
+  @@index([category])
 }
 
 model ProjectImage {

@@ -7,6 +7,38 @@ import { controllerWrapper } from '@/utils/controllerWrapper';
 import slugify from 'slugify';
 import { validate as isUuid } from 'uuid';
 import { processContentImages, routeParam } from '@/utils/helper';
+import { ProjectCategory } from '@prisma/client';
+
+const PROJECT_CATEGORIES = Object.values(ProjectCategory);
+
+const groupSelect = {
+  select: {
+    id: true,
+    name: true,
+    slug: true,
+  },
+};
+
+const resolveGroupId = async (groupId: unknown): Promise<string | null | undefined> => {
+  if (groupId === undefined) return undefined;
+  if (groupId === null || groupId === '' || groupId === 'none') return null;
+
+  const id = String(groupId);
+  if (!isUuid(id)) return null;
+
+  const group = await prisma.projectGroup.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  return group?.id ?? null;
+};
+
+const normalizeCategory = (category: unknown): ProjectCategory | undefined => {
+  if (category === undefined || category === null || category === '') return undefined;
+  const value = String(category).toUpperCase() as ProjectCategory;
+  return PROJECT_CATEGORIES.includes(value) ? value : undefined;
+};
 
 /**
  * Create a new project
@@ -41,6 +73,8 @@ const createProjectHandler = async (req: Request, res: Response): Promise<void> 
     specifications,
     amenities,
     images, // Gallery images from frontend
+    category,
+    groupId,
   } = req.body;
 
   // Get the user ID from the authenticated user
@@ -112,6 +146,12 @@ const createProjectHandler = async (req: Request, res: Response): Promise<void> 
     if (mapUrl) projectData.mapUrl = mapUrl;
     if (nearbyAttractions) projectData.nearbyAttractions = nearbyAttractions;
     if (locationDetails) projectData.locationDetails = locationDetails;
+
+    const resolvedCategory = normalizeCategory(category);
+    if (resolvedCategory) projectData.category = resolvedCategory;
+
+    const resolvedGroupId = await resolveGroupId(groupId);
+    if (resolvedGroupId !== undefined) projectData.groupId = resolvedGroupId;
 
     // Create the project
     const newProject = await tx.project.create({
@@ -191,6 +231,7 @@ const createProjectHandler = async (req: Request, res: Response): Promise<void> 
       amenities: {
         orderBy: { displayOrder: 'asc' },
       },
+      group: groupSelect,
     },
   });
 
@@ -204,7 +245,7 @@ const createProjectHandler = async (req: Request, res: Response): Promise<void> 
  * Get all projects with optional filtering
  */
 const getProjectsHandler = async (req: Request, res: Response): Promise<void> => {
-  const { published, featured, authorId, page = 1, limit = 10 } = req.query;
+  const { published, featured, authorId, category, groupId, page = 1, limit = 10 } = req.query;
 
   const skip = (Number(page) - 1) * Number(limit);
 
@@ -221,6 +262,15 @@ const getProjectsHandler = async (req: Request, res: Response): Promise<void> =>
 
   if (authorId) {
     where.authorId = String(authorId);
+  }
+
+  const resolvedCategory = normalizeCategory(category);
+  if (resolvedCategory) {
+    where.category = resolvedCategory;
+  }
+
+  if (groupId) {
+    where.groupId = String(groupId);
   }
 
   // Get total count for pagination
@@ -243,6 +293,7 @@ const getProjectsHandler = async (req: Request, res: Response): Promise<void> =>
         },
         take: 1,
       },
+      group: groupSelect,
       _count: {
         select: {
           specifications: true,
@@ -291,13 +342,26 @@ const getProjectsHandler = async (req: Request, res: Response): Promise<void> =>
  * Get published projects with optional filtering
  */
 const getPublishedProjectsHandler = async (req: Request, res: Response): Promise<void> => {
-  const { featured, page = 1, limit = 10 } = req.query;
+  const { featured, page = 1, limit = 50, category, groupId, groupSlug } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
   const take = Number(limit);
 
   const where: any = { published: true };
   if (featured !== undefined) {
     where.featured = featured === 'true';
+  }
+
+  const resolvedCategory = normalizeCategory(category);
+  if (resolvedCategory) {
+    where.category = resolvedCategory;
+  }
+
+  if (groupId) {
+    where.groupId = String(groupId);
+  }
+
+  if (groupSlug) {
+    where.group = { slug: String(groupSlug), isActive: true };
   }
 
   // Use a transaction to ensure count and data are consistent
@@ -313,6 +377,7 @@ const getPublishedProjectsHandler = async (req: Request, res: Response): Promise
           orderBy: [{ isFeatured: 'desc' }, { displayOrder: 'asc' }],
           take: 1,
         },
+        group: groupSelect,
       },
       orderBy: { publishedAt: 'desc' },
       skip,
@@ -333,72 +398,40 @@ const getPublishedProjectsHandler = async (req: Request, res: Response): Promise
 };
 
 /**
- * Get a single project by ID or slug
+ * Get a single project by ID or slug (admin)
  */
 const getProjectHandler = async (req: Request, res: Response): Promise<void> => {
-  const id = routeParam(req.params.id);
+  const identifier = routeParam(req.params.id);
+  const isId = isUuid(identifier);
 
-  try {
-    const project = await prisma.project.update({
-      where: {
-        id,
-        published: true,
+  const project = await prisma.project.findFirst({
+    where: isId ? { id: identifier } : { slug: identifier },
+    include: {
+      images: {
+        orderBy: { displayOrder: 'asc' },
       },
-      data: {
-        viewCount: { increment: 1 },
+      specifications: {
+        orderBy: { displayOrder: 'asc' },
       },
-      select: {
-        id: true,
-        title: true,
-        published: true,
-        slug: true,
-        description: true,
-        content: true,
-        logoUrl: true,
-        status: true,
-        completionDate: true,
-        featured: true,
-        publishedAt: true,
-        location: true,
-        overviewHeadline: true,
-        overviewDescription: true,
-        sitePlanHeadline: true,
-        sitePlanImage: true,
-        sitePlanBrochureUrl: true,
-        currentPlanHeadline: true,
-        currentPlanImage: true,
-        currentPlanBrochureUrl: true,
-        unitPlanHeadline: true,
-        unitPlanImage: true,
-        unitPlanBrochureUrl: true,
-        mapUrl: true,
-        nearbyAttractions: true,
-        locationDetails: true,
-        viewCount: true,
-        createdAt: true,
-        updatedAt: true,
-        images: {
-          orderBy: { displayOrder: 'asc' },
-        },
-        specifications: {
-          orderBy: { displayOrder: 'asc' },
-        },
-        amenities: {
-          orderBy: { displayOrder: 'asc' },
-        },
+      amenities: {
+        orderBy: { displayOrder: 'asc' },
       },
-    });
+      group: groupSelect,
+    },
+  });
 
-    res.status(200).json({
-      success: true,
-      data: project,
-    });
-  } catch (error) {
+  if (!project) {
     res.status(404).json({
       success: false,
-      message: 'Project not found or is not currently published',
+      message: 'Project not found',
     });
+    return;
   }
+
+  res.status(200).json({
+    success: true,
+    data: project,
+  });
 };
 
 /**
@@ -437,6 +470,8 @@ const getPublishedProjectHandler = async (req: Request, res: Response): Promise<
       featured: true,
       publishedAt: true,
       location: true,
+      category: true,
+      groupId: true,
       overviewHeadline: true,
       overviewDescription: true,
       sitePlanHeadline: true,
@@ -469,6 +504,7 @@ const getPublishedProjectHandler = async (req: Request, res: Response): Promise<
           displayOrder: 'asc',
         },
       },
+      group: groupSelect,
     },
   });
 
@@ -526,6 +562,8 @@ const updateProjectHandler = async (req: Request, res: Response): Promise<void> 
     specifications,
     amenities,
     images, // Gallery images
+    category,
+    groupId,
   } = req.body;
 
   const userId = req.user?.id;
@@ -615,6 +653,12 @@ const updateProjectHandler = async (req: Request, res: Response): Promise<void> 
   if (overviewHeadline !== undefined) updateData.overviewHeadline = overviewHeadline;
   if (overviewDescription !== undefined) updateData.overviewDescription = overviewDescription;
   if (location !== undefined) updateData.location = location;
+
+  const resolvedCategory = normalizeCategory(category);
+  if (resolvedCategory) updateData.category = resolvedCategory;
+
+  const resolvedGroupId = await resolveGroupId(groupId);
+  if (resolvedGroupId !== undefined) updateData.groupId = resolvedGroupId;
 
   // Add plan fields
   if (sitePlanHeadline !== undefined) updateData.sitePlanHeadline = sitePlanHeadline;
@@ -752,6 +796,7 @@ const updateProjectHandler = async (req: Request, res: Response): Promise<void> 
       amenities: {
         orderBy: { displayOrder: 'asc' },
       },
+      group: groupSelect,
     },
   });
 
