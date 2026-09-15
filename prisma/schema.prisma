@@ -172,12 +172,13 @@ enum ProjectCategory {
 }
 
 model ProjectGroup {
-  id          String  @id @default(uuid())
-  name        String
-  slug        String  @unique
-  description String? @db.Text
-  isActive    Boolean @default(true)
-  sortOrder   Int     @default(0)
+  id            String  @id @default(uuid())
+  name          String
+  slug          String  @unique
+  description   String? @db.Text
+  coverImageUrl String?
+  isActive      Boolean @default(true)
+  sortOrder     Int     @default(0)
 
   projects Project[]
 

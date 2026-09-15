@@ -20,7 +20,7 @@ const publishedProjectInclude = {
 };
 
 const createProjectGroupHandler = async (req: Request, res: Response): Promise<void> => {
-  const { name, description, isActive, sortOrder } = req.body;
+  const { name, description, isActive, sortOrder, coverImageUrl } = req.body;
 
   if (!name?.trim()) {
     res.status(400).json({
@@ -41,6 +41,7 @@ const createProjectGroupHandler = async (req: Request, res: Response): Promise<v
       name: name.trim(),
       slug,
       description: description || null,
+      coverImageUrl: coverImageUrl || null,
       isActive: isActive !== undefined ? !!isActive : true,
       sortOrder: Number(sortOrder) || 0,
     },
@@ -82,6 +83,7 @@ const getPublishedProjectGroupsHandler = async (_req: Request, res: Response): P
       name: true,
       slug: true,
       description: true,
+      coverImageUrl: true,
       sortOrder: true,
       _count: {
         select: {
@@ -170,7 +172,7 @@ const getPublishedProjectGroupHandler = async (req: Request, res: Response): Pro
 
 const updateProjectGroupHandler = async (req: Request, res: Response): Promise<void> => {
   const id = routeParam(req.params.id);
-  const { name, description, isActive, sortOrder } = req.body;
+  const { name, description, isActive, sortOrder, coverImageUrl } = req.body;
 
   const existing = await prisma.projectGroup.findUnique({ where: { id } });
   if (!existing) {
@@ -185,6 +187,7 @@ const updateProjectGroupHandler = async (req: Request, res: Response): Promise<v
     name?: string;
     slug?: string;
     description?: string | null;
+    coverImageUrl?: string | null;
     isActive?: boolean;
     sortOrder?: number;
   } = {};
@@ -202,6 +205,7 @@ const updateProjectGroupHandler = async (req: Request, res: Response): Promise<v
   }
 
   if (description !== undefined) updateData.description = description || null;
+  if (coverImageUrl !== undefined) updateData.coverImageUrl = coverImageUrl || null;
   if (isActive !== undefined) updateData.isActive = !!isActive;
   if (sortOrder !== undefined) updateData.sortOrder = Number(sortOrder) || 0;
 
