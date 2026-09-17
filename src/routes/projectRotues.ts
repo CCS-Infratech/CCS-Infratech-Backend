@@ -8,22 +8,51 @@ import {
   deleteProject,
   getPublishedProject,
 } from '@/controllers/projectController';
-import { authenticate } from '@/middlewares/authMiddleware';
+import {
+  authenticate,
+  authorize,
+} from '@/middlewares/authMiddleware';
 
 const router = Router();
 
-// 1. Specific/Static routes first
+// Public website routes
 router.get('/published', getPublishedProjects);
 router.get('/published/:id', getPublishedProject);
 
-// 2. Dynamic parameter routes last
-router.get('/:id', authenticate, getProject);
-router.get('/', authenticate, getProjects);
+// Admin-only management
+router.get(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  getProject
+);
 
-// 3. Mutation routes (POST/PUT/DELETE)
-// (Order matters less here, but keep it consistent)
-router.post('/', authenticate, createProject);
-router.put('/:id', authenticate, updateProject);
-router.delete('/:id', authenticate, deleteProject);
+router.get(
+  '/',
+  authenticate,
+  authorize('admin'),
+  getProjects
+);
+
+router.post(
+  '/',
+  authenticate,
+  authorize('admin'),
+  createProject
+);
+
+router.put(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  updateProject
+);
+
+router.delete(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  deleteProject
+);
 
 export default router;

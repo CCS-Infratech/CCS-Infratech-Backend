@@ -6,15 +6,43 @@ import {
   getS3Images,
   deleteS3Image,
 } from '@/controllers/imageController';
-import { authenticate } from '@/middlewares/authMiddleware';
+import {
+  authenticate,
+  authorize,
+} from '@/middlewares/authMiddleware';
+
 const router = Router();
 
+// Public website route
 router.get('/', getImages);
-router.get('/getAllS3Images', authenticate, getS3Images);
 
-router.post('/upload', authenticate, uploadMedia);
+// Admin-only S3/media management
+router.get(
+  '/getAllS3Images',
+  authenticate,
+  authorize('admin'),
+  getS3Images
+);
 
-router.delete('/deleteS3Image', authenticate, deleteS3Image);
-router.delete('/:id', authenticate, deleteImage);
+router.post(
+  '/upload',
+  authenticate,
+  authorize('admin'),
+  uploadMedia
+);
+
+router.delete(
+  '/deleteS3Image',
+  authenticate,
+  authorize('admin'),
+  deleteS3Image
+);
+
+router.delete(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  deleteImage
+);
 
 export default router;

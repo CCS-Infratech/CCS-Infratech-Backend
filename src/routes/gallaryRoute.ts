@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { authenticate } from '@/middlewares/authMiddleware';
 import {
   createGallery,
   deleteGallery,
@@ -10,15 +9,47 @@ import {
   getPublishedGalleries,
   getPublishedGalleryById,
 } from '@/controllers/gallaryController';
+import {
+  authenticate,
+  authorize,
+} from '@/middlewares/authMiddleware';
+
 const router = Router();
 
+// Public website routes
 router.get('/', getAllGalleries);
 router.get('/published', getPublishedGalleries);
 router.get('/:id', getGalleryById);
 router.get('/:id/published', getPublishedGalleryById);
-router.post('/', createGallery);
-router.put('/:id', updateGallery);
-router.delete('/:id', deleteGallery);
-router.delete('/gallary-images/:id', deleteGalleryImage);
+
+// Admin-only management
+router.post(
+  '/',
+  authenticate,
+  authorize('admin'),
+  createGallery
+);
+
+router.put(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  updateGallery
+);
+
+router.delete(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  deleteGallery
+);
+
+router.delete(
+  '/gallary-images/:id',
+  authenticate,
+  authorize('admin'),
+  deleteGalleryImage
+);
 
 export default router;
+

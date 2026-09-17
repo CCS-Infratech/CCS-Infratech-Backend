@@ -8,17 +8,51 @@ import {
   updateProjectGroup,
   deleteProjectGroup,
 } from '@/controllers/projectGroupController';
-import { authenticate } from '@/middlewares/authMiddleware';
+import {
+  authenticate,
+  authorize,
+} from '@/middlewares/authMiddleware';
 
 const router = Router();
 
+// Public website routes
 router.get('/published', getPublishedProjectGroups);
 router.get('/published/:id', getPublishedProjectGroup);
 
-router.get('/', authenticate, getProjectGroups);
-router.get('/:id', authenticate, getProjectGroup);
-router.post('/', authenticate, createProjectGroup);
-router.put('/:id', authenticate, updateProjectGroup);
-router.delete('/:id', authenticate, deleteProjectGroup);
+// Admin-only management
+router.get(
+  '/',
+  authenticate,
+  authorize('admin'),
+  getProjectGroups
+);
+
+router.get(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  getProjectGroup
+);
+
+router.post(
+  '/',
+  authenticate,
+  authorize('admin'),
+  createProjectGroup
+);
+
+router.put(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  updateProjectGroup
+);
+
+router.delete(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  deleteProjectGroup
+);
 
 export default router;

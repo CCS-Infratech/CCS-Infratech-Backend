@@ -7,19 +7,46 @@ import {
 } from '@/controllers/userAuthController';
 import { authRateLimiter } from '@/middlewares/rateLimiter';
 import { validateRequest } from '@/middlewares/validateRequest';
-import { userLoginSchema, userRegisterSchema } from '@/schemas/userSchema';
-import { authenticate } from '@/middlewares/authMiddleware';
+import {
+  userLoginSchema,
+  userRegisterSchema,
+} from '@/schemas/userSchema';
+import {
+  authenticate,
+  authorize,
+} from '@/middlewares/authMiddleware';
 
 const router = Router();
 
 router.use(authRateLimiter);
 
-router.get('/me', authenticate, getUserDetails);
+// Get current logged-in user
+router.get(
+  '/me',
+  authenticate,
+  getUserDetails
+);
 
-router.post('/register', validateRequest({ body: userRegisterSchema }), registerUser);
+// Only an admin can create users
+router.post(
+  '/register',
+  authenticate,
+  authorize('admin'),
+  validateRequest({ body: userRegisterSchema }),
+  registerUser
+);
 
-router.post('/login', validateRequest({ body: userLoginSchema }), loginUser);
+// Login remains public
+router.post(
+  '/login',
+  validateRequest({ body: userLoginSchema }),
+  loginUser
+);
 
-router.post('/logout', logoutUser);
+// Logout
+router.post(
+  '/logout',
+  logoutUser
+);
 
 export default router;

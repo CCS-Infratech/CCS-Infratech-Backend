@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
 if (!JWT_SECRET) {
   console.error('WARNING: JWT_SECRET not set in environment variables!');
 }
@@ -25,7 +26,11 @@ declare global {
 }
 
 /**
- * Middleware to authenticate requests
+ * Middleware to authenticate requests.
+ *
+ * This verifies the JWT, loads the user from the database,
+ * checks that the account is active, and attaches the user
+ * information to req.user.
  */
 export const authenticate = async (
   req: Request,
@@ -33,19 +38,15 @@ export const authenticate = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    console.log('authentication running');
     const tokenCookie = req.cookies?.authToken;
     const authHeader = req.headers.authorization;
-    let token: string | undefined;
 
-    console.log('Token from cookie:', tokenCookie);
-    console.log('Authorization header:', authHeader);
+    let token: string | undefined;
 
     if (tokenCookie) {
       token = tokenCookie;
-    } else if (authHeader && authHeader.startsWith('Bearer ')) {
+    } else if (authHeader?.startsWith('Bearer ')) {
       token = authHeader.split(' ')[1];
-    } else {
     }
 
     if (!token) {
@@ -56,30 +57,26 @@ export const authenticate = async (
       return;
     }
 
-    // Log token info (safely)
+    let decoded: string | jwt.JwtPayload;
 
-    // Verify token with proper type handling
-    let decoded;
     try {
-      // First verify the token
       decoded = jwt.verify(token, JWT_SECRET as string);
 
-      // Then check if it has the expected structure
       if (!decoded || typeof decoded !== 'object') {
-        throw new Error('Invalid token structure - not an object');
+        throw new Error('Invalid token structure');
       }
 
       if (!('userId' in decoded)) {
         throw new Error('Invalid token structure - no userId');
       }
-      if (decoded) {
-        console.log('authentication success');
-      }
     } catch (verifyError) {
       console.error(
         '[AUTH] Token verification failed:',
-        verifyError instanceof Error ? verifyError.message : String(verifyError)
+        verifyError instanceof Error
+          ? verifyError.message
+          : String(verifyError)
       );
+
       res.status(401).json({
         success: false,
         message: 'Invalid token',
@@ -89,7 +86,6 @@ export const authenticate = async (
 
     const { userId } = decoded as JWTPayload;
 
-    // Get user details
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -117,7 +113,9 @@ export const authenticate = async (
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { lastLogin: new Date() },
+      data: {
+        lastLogin: new Date(),
+      },
     });
 
     next();
@@ -127,7 +125,6 @@ export const authenticate = async (
       error instanceof Error ? error.message : String(error)
     );
 
-    // Log stack trace for debugging
     if (error instanceof Error && error.stack) {
       console.error('[AUTH] Error stack:', error.stack);
     }
@@ -137,4 +134,44 @@ export const authenticate = async (
       message: 'Authentication failed',
     });
   }
+};
+
+/**
+ * Authorization middleware.
+ *
+ * Must be used after authenticate.
+ *
+ * Example:
+ * router.get('/', authenticate, authorize('admin', 'sales'), handler);
+ */
+export const authorize = (...allowedRoles: string[]) => {
+  return (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): void => {
+    const userRole = req.user?.role?.toLowerCase();
+
+    if (!userRole) {
+      res.status(403).json({
+        success: false,
+        message: 'User role not available',
+      });
+      return;
+    }
+
+    const normalizedRoles = allowedRoles.map((role) =>
+      role.toLowerCase()
+    );
+
+    if (!normalizedRoles.includes(userRole)) {
+      res.status(403).json({
+        success: false,
+        message: 'You do not have permission to perform this action',
+      });
+      return;
+    }
+
+    next();
+  };
 };

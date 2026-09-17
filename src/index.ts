@@ -1,7 +1,8 @@
+
 import express, { type Express, type Request, type Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-
+import leadRoutes from '@/routes/leadRoutes';
 import { corsConfig } from '@/configs/cors';
 import { connectToDatabase } from '@/configs/db';
 import { envConfig } from '@/configs/env';
@@ -15,6 +16,8 @@ import projectRoutes from '@/routes/projectRotues';
 import projectGroupRoutes from '@/routes/projectGroupRoutes';
 import gallaryRoutes from '@/routes/gallaryRoute';
 import pressRoutes from '@/routes/pressRoute';
+import settingsRoute from '@/routes/settingsRoute';
+import leadershipRoute from '@/routes/leadershipRoute';
 
 const app: Express = express();
 
@@ -44,6 +47,9 @@ app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/project-groups', projectGroupRoutes);
 app.use('/api/v1/gallary', gallaryRoutes);
 app.use('/api/v1/press', pressRoutes);
+app.use('/api/v1/leads', leadRoutes);
+app.use('/api/v1/settings', settingsRoute);
+app.use('/api/v1/leadership', leadershipRoute);
 
 app.use(notFound);
 

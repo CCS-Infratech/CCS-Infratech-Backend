@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { authenticate } from '@/middlewares/authMiddleware';
 import {
   createPress,
   deletePress,
@@ -9,15 +8,45 @@ import {
   updatePress,
   getPublishedPress,
 } from '@/controllers/pressController';
+import {
+  authenticate,
+  authorize,
+} from '@/middlewares/authMiddleware';
 
 const router = Router();
 
+// Public website routes
 router.get('/', getAllPress);
 router.get('/published', getPublishedPress);
 router.get('/:id', getPressById);
-router.post('/', createPress);
-router.put('/:id', updatePress);
-router.delete('/:id', deletePress);
-router.delete('/press-items/:id', deletePressItem);
+
+// Admin-only management
+router.post(
+  '/',
+  authenticate,
+  authorize('admin'),
+  createPress
+);
+
+router.put(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  updatePress
+);
+
+router.delete(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  deletePress
+);
+
+router.delete(
+  '/press-items/:id',
+  authenticate,
+  authorize('admin'),
+  deletePressItem
+);
 
 export default router;

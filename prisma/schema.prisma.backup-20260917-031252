@@ -7,9 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//======================================================
-// USER MANAGEMENT
-//======================================================
+//==================== USER MANAGEMENT ====================
 
 model User {
   id           String    @id @default(uuid())
@@ -32,15 +30,13 @@ model User {
   @@index([role])
 }
 
-//======================================================
-// BLOG MANAGEMENT
-//======================================================
+//==================== BLOG MANAGEMENT ====================
 
 model Blog {
   id          String    @id @default(uuid())
   title       String
   slug        String    @unique
-  content     String    @db.Text
+  content     String    @db.Text // Use Text type for long content
   summary     String?
   published   Boolean   @default(false)
   publishedAt DateTime?
@@ -79,9 +75,7 @@ model BlogImage {
   @@index([blogId])
 }
 
-//======================================================
-// GALLERY MANAGEMENT
-//======================================================
+//==================== GALLERY MANAGEMENT ====================
 
 model Gallery {
   id          String  @id @default(uuid())
@@ -120,9 +114,7 @@ model GalleryImage {
   @@index([galleryId])
 }
 
-//======================================================
-// PRESS & COVERAGE MANAGEMENT
-//======================================================
+//==================== PRESS & COVERAGE MANAGEMENT ====================
 
 model Press {
   id          String  @id @default(uuid())
@@ -163,9 +155,7 @@ model PressItem {
   @@index([pressId])
 }
 
-//======================================================
-// PROJECT MANAGEMENT
-//======================================================
+//==================== PROJECT MANAGEMENT ====================
 
 enum ProjectStatus {
   UNDER_CONSTRUCTION
@@ -190,10 +180,8 @@ model ProjectGroup {
   isActive      Boolean @default(true)
   sortOrder     Int     @default(0)
 
-  // Relations
   projects Project[]
 
-  // Metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -216,7 +204,6 @@ model Project {
   publishedAt    DateTime?
   viewCount      Int             @default(0)
 
-  // Project Group
   groupId String?
   group   ProjectGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
@@ -287,6 +274,7 @@ model ProjectImage {
   @@index([isFeatured])
 }
 
+// New model for Specifications & Features section
 model ProjectSpecification {
   id           String @id @default(uuid())
   title        String
@@ -305,6 +293,7 @@ model ProjectSpecification {
   @@index([projectId])
 }
 
+// New model for Amenities section
 model ProjectAmenity {
   id           String @id @default(uuid())
   name         String
@@ -322,9 +311,7 @@ model ProjectAmenity {
   @@index([projectId])
 }
 
-//======================================================
-// LEAD / ENQUIRY MANAGEMENT
-//======================================================
+//==================== LEAD / ENQUIRY MANAGEMENT ====================
 
 enum LeadType {
   CONTACT
@@ -375,115 +362,4 @@ model Lead {
   @@index([email])
   @@index([phone])
   @@index([createdAt])
-}
-
-//======================================================
-// WEBSITE / SITE SETTINGS
-//======================================================
-//
-// Single global record for the public CCS website.
-// This will allow the admin panel to edit:
-//
-// - Company/contact information
-// - Phone number
-// - Email
-// - Website addresses
-// - Social media links
-// - Registered office
-// - Corporate office
-// - Other footer/contact information
-//
-
-model SiteSettings {
-  id Int @id @default(1)
-
-  // Company information
-  companyName        String?
-  companyDescription String?
-
-  // Contact information
-  phone    String?
-  phone2   String?
-  email    String?
-  email2   String?
-  whatsapp String?
-
-  // Website
-  websiteUrl String?
-
-  // Main address
-  address String? @db.Text
-
-  // Office addresses
-  registeredOffice String? @db.Text
-  corporateOffice  String? @db.Text
-
-  // Social media
-  facebookUrl  String?
-  instagramUrl String?
-  youtubeUrl   String?
-  linkedinUrl  String?
-  twitterUrl   String?
-
-  // Branding
-  logoUrl    String?
-  faviconUrl String?
-  footerText String? @db.Text
-
-  // Optional additional information
-  mapUrl       String?
-  googleMapUrl String?
-  workingHours String?
-
-  // Metadata
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-//======================================================
-// LEADERSHIP / PARTNERS / TEAM
-//======================================================
-//
-// Admin-editable leadership/team section.
-// Used for entries like:
-//
-// Faisal Aslam
-// Zeeshan Aslam
-// Suhail Aslam
-// Shoaib Akram
-//
-// Admin will eventually be able to:
-// - Add member
-// - Edit member
-// - Change name
-// - Change designation
-// - Change experience
-// - Change image
-// - Change bio
-// - Enable/disable member
-// - Reorder members
-//
-
-model Leadership {
-  id String @id @default(uuid())
-
-  // Basic information
-  name        String
-  designation String
-
-  // Profile information
-  imageUrl   String?
-  experience String?
-  bio        String? @db.Text
-
-  // Display controls
-  isActive  Boolean @default(true)
-  sortOrder Int     @default(0)
-
-  // Metadata
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([isActive])
-  @@index([sortOrder])
 }

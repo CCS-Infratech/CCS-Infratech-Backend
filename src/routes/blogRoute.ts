@@ -9,8 +9,15 @@ import {
   getPublisedBlogs,
 } from '@/controllers/blogController';
 import { validateRequest } from '@/middlewares/validateRequest';
-import { blogCreateSchema, blogUpdateSchema } from '@/schemas/blogSchema';
-import { authenticate } from '@/middlewares/authMiddleware';
+import {
+  blogCreateSchema,
+  blogUpdateSchema,
+} from '@/schemas/blogSchema';
+import {
+  authenticate,
+  authorize,
+} from '@/middlewares/authMiddleware';
+
 const router = Router();
 
 // Public routes
@@ -18,11 +25,29 @@ router.get('/', getBlogs);
 router.get('/published', getPublisedBlogs);
 router.get('/:identifier', getBlog);
 
-router.post('/', authenticate, validateRequest({ body: blogCreateSchema }), createBlog);
+// Admin-only management
+router.post(
+  '/',
+  authenticate,
+  authorize('admin'),
+  validateRequest({ body: blogCreateSchema }),
+  createBlog
+);
 
-router.put('/:id', authenticate, validateRequest({ body: blogUpdateSchema }), updateBlog);
+router.put(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  validateRequest({ body: blogUpdateSchema }),
+  updateBlog
+);
 
-router.delete('/:id', authenticate, deleteBlog);
+router.delete(
+  '/:id',
+  authenticate,
+  authorize('admin'),
+  deleteBlog
+);
 
 // router.post(
 //   '/:id/images',
