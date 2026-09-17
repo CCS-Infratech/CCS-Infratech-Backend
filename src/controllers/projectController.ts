@@ -7,6 +7,7 @@ import { controllerWrapper } from '@/utils/controllerWrapper';
 import slugify from 'slugify';
 import { validate as isUuid } from 'uuid';
 import { processContentImages, routeParam } from '@/utils/helper';
+import { resolveAmenityImageUrl } from '@/utils/amenityIcons';
 import { ProjectCategory } from '@prisma/client';
 
 const PROJECT_CATEGORIES = Object.values(ProjectCategory);
@@ -209,7 +210,7 @@ const createProjectHandler = async (req: Request, res: Response): Promise<void> 
         data: amenities.map((amenity, index) => ({
           projectId: newProject.id,
           name: amenity.name,
-          imageUrl: amenity.imageUrl || null,
+          imageUrl: resolveAmenityImageUrl(amenity.name, amenity.imageUrl),
           displayOrder: index,
         })),
       });
@@ -773,7 +774,7 @@ const updateProjectHandler = async (req: Request, res: Response): Promise<void> 
           data: amenities.map((amenity, index) => ({
             projectId: id,
             name: amenity.name,
-            imageUrl: amenity.imageUrl || null,
+            imageUrl: resolveAmenityImageUrl(amenity.name, amenity.imageUrl),
             displayOrder: index,
           })),
         });
