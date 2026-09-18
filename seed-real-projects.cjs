@@ -178,6 +178,8 @@ async function main() {
 
       locationDetails: "Lucknow, UP",
 
+      mapUrl: "https://maps.app.goo.gl/E4RYhPLzUjqBq9Se9",
+
       authorId: admin.id,
     },
 
@@ -212,6 +214,8 @@ async function main() {
       location: "Lucknow, UP",
 
       locationDetails: "Lucknow, UP",
+
+      mapUrl: "https://maps.app.goo.gl/E4RYhPLzUjqBq9Se9",
 
       authorId: admin.id,
     },
@@ -276,7 +280,9 @@ async function main() {
   console.log("Public URLs:");
   console.log("https://www.ccsinfratech.com/projects");
   console.log("https://www.ccsinfratech.com/projects/amor-reality");
-  console.log("https://www.ccsinfratech.com/projects/chisti-cold-storage");
+  console.log(
+    "https://www.ccsinfratech.com/projects/chisti-cold-storage"
+  );
 }
 
 main()
