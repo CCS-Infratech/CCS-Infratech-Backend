@@ -121,6 +121,27 @@ model GalleryImage {
 }
 
 //======================================================
+// WALKTHROUGH MANAGEMENT
+//======================================================
+
+model Walkthrough {
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+  videoUrl    String
+  thumbnail   String
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+//======================================================
 // PRESS & COVERAGE MANAGEMENT
 //======================================================
 
