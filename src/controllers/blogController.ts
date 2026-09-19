@@ -1,9 +1,74 @@
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/configs/db';
 import { controllerWrapper } from '@/utils/controllerWrapper';
 import slugify from 'slugify';
 import { validate as isUuid } from 'uuid';
 import { processContentImages, routeParam } from '@/utils/helper';
+
+type PrismaLike = Prisma.TransactionClient | typeof prisma;
+
+function normalizeCoverImageUrl(value: unknown): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === '') {
+    return null;
+  }
+
+  return String(value);
+}
+
+async function syncCoverImage(
+  client: PrismaLike,
+  blogId: string,
+  coverImageUrl: string | null | undefined,
+  alt = ''
+): Promise<void> {
+  if (coverImageUrl === undefined) {
+    return;
+  }
+
+  const existing = await client.blogImage.findFirst({
+    where: { blogId },
+    orderBy: { sortOrder: 'asc' },
+  });
+
+  if (!coverImageUrl) {
+    if (existing) {
+      await client.blogImage.delete({
+        where: { id: existing.id },
+      });
+    }
+    return;
+  }
+
+  const filename = coverImageUrl.split('/').pop() || 'cover';
+
+  if (existing) {
+    await client.blogImage.update({
+      where: { id: existing.id },
+      data: {
+        url: coverImageUrl,
+        filename,
+        alt,
+      },
+    });
+    return;
+  }
+
+  await client.blogImage.create({
+    data: {
+      blogId,
+      url: coverImageUrl,
+      filename,
+      alt,
+      caption: '',
+      sortOrder: 0,
+    },
+  });
+}
 
 declare global {
   namespace Express {
@@ -20,7 +85,8 @@ declare global {
  * Create a new blog post
  */
 const createBlogHandler = async (req: Request, res: Response): Promise<void> => {
-  const { title, content, summary, published } = req.body;
+  const { title, content, summary, published, coverImageUrl } = req.body;
+  const coverUrl = normalizeCoverImageUrl(coverImageUrl);
 
   // Get the user ID from the authenticated user
   const userId = req.user?.id;
@@ -64,16 +130,19 @@ const createBlogHandler = async (req: Request, res: Response): Promise<void> => 
       },
     });
 
-    // Create image records for all extracted images
-    if (extractedImages.length > 0) {
+    await syncCoverImage(tx, newBlog.id, coverUrl, title);
+
+    const contentImages = extractedImages.filter((image) => image.url !== coverUrl);
+
+    if (contentImages.length > 0) {
       await tx.blogImage.createMany({
-        data: extractedImages.map((image, index) => ({
+        data: contentImages.map((image, index) => ({
           blogId: newBlog.id,
           url: image.url,
           filename: image.filename,
           alt: image.alt || '',
           caption: image.caption || '',
-          sortOrder: index,
+          sortOrder: (coverUrl ? 1 : 0) + index,
         })),
       });
     }
@@ -276,7 +345,8 @@ const getBlogHandler = async (req: Request, res: Response): Promise<void> => {
  */
 const updateBlogHandler = async (req: Request, res: Response): Promise<void> => {
   const id = routeParam(req.params.id);
-  const { title, content, summary, published } = req.body;
+  const { title, content, summary, published, coverImageUrl } = req.body;
+  const coverUrl = normalizeCoverImageUrl(coverImageUrl);
   const userId = req.user?.id;
 
   if (!userId) {
@@ -383,6 +453,8 @@ const updateBlogHandler = async (req: Request, res: Response): Promise<void> => 
         });
       }
 
+      await syncCoverImage(tx, id, coverUrl, title || blog.title);
+
       return updated;
     });
 
@@ -416,10 +488,15 @@ const updateBlogHandler = async (req: Request, res: Response): Promise<void> => 
       }
     }
 
-    // Update the blog
     const updatedBlog = await prisma.blog.update({
       where: { id },
       data: updateData,
+    });
+
+    await syncCoverImage(prisma, id, coverUrl, title || blog.title);
+
+    const blogWithImages = await prisma.blog.findUnique({
+      where: { id: updatedBlog.id },
       include: {
         images: {
           orderBy: { sortOrder: 'asc' },
@@ -430,7 +507,7 @@ const updateBlogHandler = async (req: Request, res: Response): Promise<void> => 
     res.status(200).json({
       success: true,
       message: 'Blog post updated successfully',
-      data: updatedBlog,
+      data: blogWithImages,
     });
   }
 };

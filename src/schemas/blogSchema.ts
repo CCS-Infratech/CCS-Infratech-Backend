@@ -1,10 +1,15 @@
 import { z, type AnyZodObject } from 'zod';
 
+const coverImageUrlSchema = z
+  .union([z.string().min(1), z.literal(''), z.null()])
+  .optional();
+
 const blogCreateSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   content: z.string().min(10, 'Content must be at least 10 characters'),
   summary: z.string().optional(),
   published: z.boolean().optional().default(false),
+  coverImageUrl: coverImageUrlSchema,
 });
 
 const blogUpdateSchema = z.object({
@@ -12,6 +17,7 @@ const blogUpdateSchema = z.object({
   content: z.string().min(10, 'Content must be at least 10 characters').optional(),
   summary: z.string().optional(),
   published: z.boolean().optional(),
+  coverImageUrl: coverImageUrlSchema,
 });
 
 export {blogCreateSchema,blogUpdateSchema}
