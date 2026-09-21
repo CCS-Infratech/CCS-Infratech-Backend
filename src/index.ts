@@ -19,6 +19,7 @@ import pressRoutes from '@/routes/pressRoute';
 import settingsRoute from '@/routes/settingsRoute';
 import leadershipRoute from '@/routes/leadershipRoute';
 import walkthroughRoute from '@/routes/walkthroughRoute';
+import videoRoute from '@/routes/videoRoute';
 
 const app: Express = express();
 
@@ -52,6 +53,7 @@ app.use('/api/v1/leads', leadRoutes);
 app.use('/api/v1/settings', settingsRoute);
 app.use('/api/v1/leadership', leadershipRoute);
 app.use('/api/v1/walkthrough', walkthroughRoute);
+app.use('/api/v1/videos', videoRoute);
 
 app.use(notFound);
 

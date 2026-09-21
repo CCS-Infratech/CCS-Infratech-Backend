@@ -40,6 +40,7 @@
   "type": "module",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.946.0",
+    "@aws-sdk/s3-request-presigner": "^3.969.0",
     "@prisma/client": "^6.12.0",
     "@types/jsdom": "^27.0.0",
     "@types/multer": "^2.0.0",
