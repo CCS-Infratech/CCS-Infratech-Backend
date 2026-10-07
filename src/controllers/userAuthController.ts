@@ -219,9 +219,35 @@ const getCurrentUserHandler = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Return user data
+    // Issue a fresh access token so an authenticated session
+    // can continue without requiring another login.
+    const payload = {
+      userId: user.id,
+      role: user.role,
+      username: user.username,
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    const cookieOptions = authCookieOptions(req);
+
+    // Refresh the existing authentication cookies.
+    res.cookie('authToken', token, cookieOptions);
+
+    const userInfo = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    };
+
+    res.cookie('userInfo', JSON.stringify(userInfo), cookieOptions);
+
+    // Return user data together with the renewed token.
     res.status(200).json({
       success: true,
+      token,
       user,
     });
   } catch (error) {

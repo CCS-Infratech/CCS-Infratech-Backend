@@ -485,6 +485,23 @@ model SiteSettings {
 // - Reorder members
 //
 
+model Testimonial {
+  id        String  @id @default(uuid())
+  author    String
+  role      String
+  content   String  @db.Text
+  imageUrl  String?
+  rating    Int     @default(5)
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
 model Leadership {
   id String @id @default(uuid())
 

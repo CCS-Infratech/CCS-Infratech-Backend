@@ -5,28 +5,101 @@ import { routeParam } from '@/utils/helper';
 
 /**
  * Get all press categories
+ *
+ * Backward compatible:
+ * - GET /press
+ *   Returns all press categories exactly as before.
+ *
+ * - GET /press?page=1&limit=15
+ *   Returns only the requested page for Admin pagination.
  */
-const getAllPressHandler = async (req: Request, res: Response): Promise<void> => {
-  const pressCategories = await prisma.press.findMany({
-    include: {
-      items: {
-        orderBy: {
-          sortOrder: 'asc',
+const getAllPressHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const hasPagination =
+    req.query.page !== undefined ||
+    req.query.limit !== undefined;
+
+  /*
+   * Preserve the old behavior for callers that do not
+   * send pagination parameters.
+   */
+  if (!hasPagination) {
+    const pressCategories = await prisma.press.findMany({
+      include: {
+        items: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
         },
       },
-    },
-  });
+    });
+
+    res.status(200).json({
+      success: true,
+      data: pressCategories,
+    });
+
+    return;
+  }
+
+  /*
+   * Server-side pagination
+   */
+  const rawPage = Number(req.query.page ?? 1);
+  const rawLimit = Number(req.query.limit ?? 15);
+
+  const page =
+    Number.isFinite(rawPage) && rawPage > 0
+      ? Math.floor(rawPage)
+      : 1;
+
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(Math.floor(rawLimit), 50)
+      : 15;
+
+  const skip = (page - 1) * limit;
+
+  const [total, pressCategories] = await prisma.$transaction([
+    prisma.press.count(),
+
+    prisma.press.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip,
+      take: limit,
+      include: {
+        items: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
+      },
+    }),
+  ]);
 
   res.status(200).json({
     success: true,
     data: pressCategories,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
   });
 };
 
 /**
  * Get all published press articles (where isActive is true)
  */
-const getPublishedPressHandler = async (req: Request, res: Response): Promise<void> => {
+const getPublishedPressHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const pressCategories = await prisma.press.findMany({
     where: {
       isActive: true,
@@ -50,7 +123,10 @@ const getPublishedPressHandler = async (req: Request, res: Response): Promise<vo
 /**
  * Get a press category by ID
  */
-const getPressByIdHandler = async (req: Request, res: Response): Promise<void> => {
+const getPressByIdHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const id = routeParam(req.params.id);
 
   const press = await prisma.press.findUnique({
@@ -81,8 +157,17 @@ const getPressByIdHandler = async (req: Request, res: Response): Promise<void> =
 /**
  * Create new press category
  */
-const createPressHandler = async (req: Request, res: Response): Promise<void> => {
-  const { name, description = '', slug, isActive = true, items = [] } = req.body;
+const createPressHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const {
+    name,
+    description = '',
+    slug,
+    isActive = true,
+    items = [],
+  } = req.body;
 
   // Validation
   if (!name || !slug) {
@@ -97,7 +182,8 @@ const createPressHandler = async (req: Request, res: Response): Promise<void> =>
   if (!/^[a-z0-9-]+$/.test(slug)) {
     res.status(400).json({
       success: false,
-      message: 'Slug can only contain lowercase letters, numbers, and hyphens',
+      message:
+        'Slug can only contain lowercase letters, numbers, and hyphens',
     });
     return;
   }
@@ -154,7 +240,9 @@ const createPressHandler = async (req: Request, res: Response): Promise<void> =>
         create: items.map((item: any, index: number) => ({
           title: item.title.trim(),
           publicationName: item.publicationName?.trim() || null,
-          publicationDate: item.publicationDate ? new Date(item.publicationDate) : null,
+          publicationDate: item.publicationDate
+            ? new Date(item.publicationDate)
+            : null,
           url: item.url?.trim() || null,
           imageUrl: item.imageUrl?.trim() || null,
           excerpt: item.excerpt?.trim() || null,
@@ -179,9 +267,18 @@ const createPressHandler = async (req: Request, res: Response): Promise<void> =>
 /**
  * Update a press category
  */
-const updatePressHandler = async (req: Request, res: Response): Promise<void> => {
+const updatePressHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const id = routeParam(req.params.id);
-  const { name, description, slug, isActive, items = [] } = req.body;
+  const {
+    name,
+    description,
+    slug,
+    isActive,
+    items = [],
+  } = req.body;
 
   // Check if press category exists
   const existingPress = await prisma.press.findUnique({
@@ -213,22 +310,41 @@ const updatePressHandler = async (req: Request, res: Response): Promise<void> =>
   }
 
   // Get existing press item IDs for comparison
-  const existingItemIds = existingPress.items.map((item) => item.id);
-  const newItemIds = items.filter((item: any) => item.id).map((item: any) => item.id);
+  const existingItemIds = existingPress.items.map(
+    (item) => item.id
+  );
 
-  // Find items to delete (exists in DB but not in the request)
-  const itemsToDelete = existingItemIds.filter((id) => !newItemIds.includes(id));
+  const newItemIds = items
+    .filter((item: any) => item.id)
+    .map((item: any) => item.id);
+
+  // Find items to delete
+  const itemsToDelete = existingItemIds.filter(
+    (id) => !newItemIds.includes(id)
+  );
 
   // Transaction to ensure all operations complete or none do
   const press = await prisma.$transaction(async (tx) => {
     // 1. Update the press category basic information
     const updateData: any = {};
-    if (name !== undefined) updateData.name = name.trim();
-    if (description !== undefined) updateData.description = description.trim();
-    if (slug !== undefined) updateData.slug = slug.trim();
-    if (isActive !== undefined) updateData.isActive = !!isActive;
 
-    const updatedPress = await tx.press.update({
+    if (name !== undefined) {
+      updateData.name = name.trim();
+    }
+
+    if (description !== undefined) {
+      updateData.description = description.trim();
+    }
+
+    if (slug !== undefined) {
+      updateData.slug = slug.trim();
+    }
+
+    if (isActive !== undefined) {
+      updateData.isActive = !!isActive;
+    }
+
+    await tx.press.update({
       where: { id },
       data: updateData,
     });
@@ -243,18 +359,24 @@ const updatePressHandler = async (req: Request, res: Response): Promise<void> =>
       });
     }
 
-    // 3. Process each item in the request
+    // 3. Process each item
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
-      if (item.id && existingItemIds.includes(item.id)) {
+      if (
+        item.id &&
+        existingItemIds.includes(item.id)
+      ) {
         // Update existing press item
         await tx.pressItem.update({
           where: { id: item.id },
           data: {
             title: item.title?.trim() || '',
-            publicationName: item.publicationName?.trim() || null,
-            publicationDate: item.publicationDate ? new Date(item.publicationDate) : null,
+            publicationName:
+              item.publicationName?.trim() || null,
+            publicationDate: item.publicationDate
+              ? new Date(item.publicationDate)
+              : null,
             url: item.url?.trim() || null,
             imageUrl: item.imageUrl?.trim() || null,
             excerpt: item.excerpt?.trim() || null,
@@ -266,8 +388,11 @@ const updatePressHandler = async (req: Request, res: Response): Promise<void> =>
         await tx.pressItem.create({
           data: {
             title: item.title?.trim() || '',
-            publicationName: item.publicationName?.trim() || null,
-            publicationDate: item.publicationDate ? new Date(item.publicationDate) : null,
+            publicationName:
+              item.publicationName?.trim() || null,
+            publicationDate: item.publicationDate
+              ? new Date(item.publicationDate)
+              : null,
             url: item.url?.trim() || null,
             imageUrl: item.imageUrl?.trim() || null,
             excerpt: item.excerpt?.trim() || null,
@@ -278,7 +403,7 @@ const updatePressHandler = async (req: Request, res: Response): Promise<void> =>
       }
     }
 
-    // Return the press category with updated items
+    // Return updated press category
     return tx.press.findUnique({
       where: { id },
       include: {
@@ -299,7 +424,10 @@ const updatePressHandler = async (req: Request, res: Response): Promise<void> =>
 /**
  * Delete a press category
  */
-const deletePressHandler = async (req: Request, res: Response): Promise<void> => {
+const deletePressHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const id = routeParam(req.params.id);
 
   // Check if press category exists
@@ -316,7 +444,7 @@ const deletePressHandler = async (req: Request, res: Response): Promise<void> =>
     return;
   }
 
-  // Delete press category (will cascade delete items from DB due to onDelete: Cascade)
+  // Delete press category
   await prisma.press.delete({
     where: { id },
   });
@@ -330,7 +458,10 @@ const deletePressHandler = async (req: Request, res: Response): Promise<void> =>
 /**
  * Delete a press item
  */
-const deletePressItemHandler = async (req: Request, res: Response): Promise<void> => {
+const deletePressItemHandler = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const id = routeParam(req.params.id);
 
   // Check if press item exists
@@ -358,10 +489,30 @@ const deletePressItemHandler = async (req: Request, res: Response): Promise<void
 };
 
 // Export all controllers with controllerWrapper
-export const getAllPress = controllerWrapper(getAllPressHandler);
-export const getPublishedPress = controllerWrapper(getPublishedPressHandler);
-export const getPressById = controllerWrapper(getPressByIdHandler);
-export const createPress = controllerWrapper(createPressHandler);
-export const updatePress = controllerWrapper(updatePressHandler);
-export const deletePress = controllerWrapper(deletePressHandler);
-export const deletePressItem = controllerWrapper(deletePressItemHandler);
+export const getAllPress = controllerWrapper(
+  getAllPressHandler
+);
+
+export const getPublishedPress = controllerWrapper(
+  getPublishedPressHandler
+);
+
+export const getPressById = controllerWrapper(
+  getPressByIdHandler
+);
+
+export const createPress = controllerWrapper(
+  createPressHandler
+);
+
+export const updatePress = controllerWrapper(
+  updatePressHandler
+);
+
+export const deletePress = controllerWrapper(
+  deletePressHandler
+);
+
+export const deletePressItem = controllerWrapper(
+  deletePressItemHandler
+);
