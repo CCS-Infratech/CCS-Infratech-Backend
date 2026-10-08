@@ -695,48 +695,123 @@ const updateProjectHandler = async (req: Request, res: Response): Promise<void> 
     });
 
     // Handle images (both extracted from content and gallery images)
-    if (content || (images && Array.isArray(images))) {
-      // Get existing images
+    if (content || Array.isArray(images)) {
       const existingImages = await tx.projectImage.findMany({
         where: { projectId: id },
       });
 
-      // Extract URLs from existing images
-      const existingUrls = new Set(existingImages.map((img) => img.url));
+      // When the gallery array is supplied, it is the source of truth.
+      // This allows Admin removals, featured-image changes and reordering
+      // to persist correctly.
+      if (Array.isArray(images)) {
+        const desiredImages = new Map<string, any>();
 
-      // Combine extracted images and gallery images
-      const allNewImages = [...extractedImages];
+        images.forEach((image, index) => {
+          if (!image?.url) return;
 
-      if (images && Array.isArray(images) && images.length > 0) {
-        images.forEach((img, index) => {
-          if (!existingUrls.has(img.url)) {
-            allNewImages.push({
-              url: img.url,
-              filename: img.filename,
-              alt: img.alt || '',
-              caption: img.caption || '',
-              isFeatured: img.isFeatured || false,
-              displayOrder:
-                img.displayOrder !== undefined ? img.displayOrder : existingImages.length + index,
-            });
-          }
+          desiredImages.set(image.url, {
+            url: image.url,
+            filename:
+              image.filename || image.url.split('/').pop() || 'image',
+            alt: image.alt || '',
+            caption: image.caption || '',
+            isFeatured: !!image.isFeatured,
+            displayOrder:
+              image.displayOrder !== undefined
+                ? image.displayOrder
+                : index,
+          });
         });
-      }
 
-      // Add new images to the database
-      if (allNewImages.length > 0) {
-        await tx.projectImage.createMany({
-          data: allNewImages.map((image, index) => ({
-            projectId: id,
+        const desiredImageList = Array.from(desiredImages.values());
+
+        // Delete ProjectImage records that are no longer part of
+        // the submitted gallery. This intentionally handles [].
+        if (desiredImageList.length === 0) {
+          await tx.projectImage.deleteMany({
+            where: { projectId: id },
+          });
+        } else {
+          await tx.projectImage.deleteMany({
+            where: {
+              projectId: id,
+              url: {
+                notIn: desiredImageList.map((image) => image.url),
+              },
+            },
+          });
+        }
+
+        const existingImagesByUrl = new Map(
+          existingImages.map((image) => [image.url, image])
+        );
+
+        // Normalize the gallery so at most one image is featured.
+        let featuredAssigned = false;
+
+        for (const image of desiredImageList) {
+          const shouldBeFeatured =
+            !!image.isFeatured && !featuredAssigned;
+
+          if (shouldBeFeatured) {
+            featuredAssigned = true;
+          }
+
+          const imageData = {
             url: image.url,
             filename: image.filename,
             alt: image.alt || '',
             caption: image.caption || '',
-            isFeatured: image.isFeatured || false,
+            isFeatured: shouldBeFeatured,
             displayOrder:
-              image.displayOrder !== undefined ? image.displayOrder : existingImages.length + index,
-          })),
-        });
+              image.displayOrder !== undefined
+                ? image.displayOrder
+                : 0,
+          };
+
+          const existingImage = existingImagesByUrl.get(image.url);
+
+          if (existingImage) {
+            await tx.projectImage.update({
+              where: { id: existingImage.id },
+              data: imageData,
+            });
+          } else {
+            await tx.projectImage.create({
+              data: {
+                projectId: id,
+                ...imageData,
+              },
+            });
+          }
+        }
+      } else if (extractedImages.length > 0) {
+        // Content-only update: preserve existing gallery records and
+        // add only newly discovered content images.
+        const existingUrls = new Set(
+          existingImages.map((image) => image.url)
+        );
+
+        const newContentImages = extractedImages
+          .filter((image) => image?.url && !existingUrls.has(image.url))
+          .map((image, index) => ({
+            projectId: id,
+            url: image.url,
+            filename:
+              image.filename ||
+              image.url.split('/').pop() ||
+              'image',
+            alt: image.alt || '',
+            caption: image.caption || '',
+            isFeatured: false,
+            displayOrder: existingImages.length + index,
+          }));
+
+        if (newContentImages.length > 0) {
+          await tx.projectImage.createMany({
+            data: newContentImages,
+          });
+        }
       }
     }
 
