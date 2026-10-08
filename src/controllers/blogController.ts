@@ -201,9 +201,11 @@ const getBlogsHandler = async (req: Request, res: Response): Promise<void> => {
         },
       },
       images: {
-        orderBy: {
-          sortOrder: 'asc',
-        },
+        orderBy: [
+          { sortOrder: 'asc' },
+          { createdAt: 'asc' },
+          { id: 'asc' },
+        ],
         take: 1,
       },
     },
@@ -262,9 +264,11 @@ const getPublusedBlogsHandler = async (req: Request, res: Response): Promise<voi
         },
       },
       images: {
-        orderBy: {
-          sortOrder: 'asc',
-        },
+        orderBy: [
+          { sortOrder: 'asc' },
+          { createdAt: 'asc' },
+          { id: 'asc' },
+        ],
         take: 1,
       },
     },
@@ -311,9 +315,11 @@ const getBlogHandler = async (req: Request, res: Response): Promise<void> => {
         },
       },
       images: {
-        orderBy: {
-          sortOrder: 'asc',
-        },
+        orderBy: [
+          { sortOrder: 'asc' },
+          { createdAt: 'asc' },
+          { id: 'asc' },
+        ],
       },
     },
   });
