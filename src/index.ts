@@ -24,6 +24,10 @@ import testimonialRoute from '@/routes/testimonialRoute';
 
 const app: Express = express();
 
+// Trust the single reverse proxy (Caddy) in front of the API.
+// This allows express-rate-limit to correctly use X-Forwarded-For.
+app.set('trust proxy', 1);
+
 // 1. Basic middleware FIRST
 app.use(cookieParser());
 app.use(cors(corsConfig));
